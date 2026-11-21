@@ -9,6 +9,8 @@ interface Props {
   bottomInset: number;
   /** Fraction of the free space's smaller side the moon's diameter should fill. */
   fill?: number;
+  /** View from the Southern Hemisphere: the whole moon appears rotated 180°. */
+  southern?: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * moves the camera back until the moon is the right size, then shifts the
  * projection (not the camera) so the moon is centred in the free space.
  */
-export default function CameraRig({ topInset, bottomInset, fill = 0.72 }: Props) {
+export default function CameraRig({ topInset, bottomInset, fill = 0.72, southern = false }: Props) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const { width, height } = useThree((s) => s.size);
 
@@ -28,12 +30,13 @@ export default function CameraRig({ topInset, bottomInset, fill = 0.72 }: Props)
     const viewHeightPerUnitDistance = 2 * Math.tan((camera.fov * Math.PI) / 360);
     const distance = (2 * MOON_RADIUS * height) / (viewHeightPerUnitDistance * target);
     camera.position.set(0, 0, distance);
+    camera.up.set(0, southern ? -1 : 1, 0);
     camera.lookAt(0, 0, 0);
 
     // A positive y offset moves the view window down, which moves content up.
     camera.setViewOffset(width, height, 0, (bottomInset - topInset) / 2, width, height);
     camera.updateProjectionMatrix();
-  }, [camera, width, height, topInset, bottomInset, fill]);
+  }, [camera, width, height, topInset, bottomInset, fill, southern]);
 
   return null;
 }

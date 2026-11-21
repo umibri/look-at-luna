@@ -3,11 +3,20 @@ import Header from '@components/Header';
 import DateControls from '@components/DateControls';
 import LoadingVeil from '@components/LoadingVeil';
 import MoonInfo from '@components/MoonInfo';
+import ObserverControls, { type Hemisphere } from '@components/ObserverControls';
 import PhaseScrubber from '@components/PhaseScrubber';
 import MoonScene from '@components/Three/MoonScene';
 import { useElementHeight } from './hooks/useElementHeight';
+import { getLibration } from '@lib/libration';
 import { findPhase, getMoonData, lunarCycle } from '@lib/moon';
+import { coarsen, moonRiseSet, type Location, type RiseSet } from '@lib/observer';
+import { load, save } from '@lib/storage';
 import { addDays, isSameLocalDay, parseLocalDate, toDateInputValue, toJulianDate } from '@lib/utils';
+
+const isHemisphere = (v: unknown): v is Hemisphere => v === 'north' || v === 'south';
+const isLocation = (v: unknown): v is Location =>
+  typeof v === 'object' && v !== null &&
+  typeof (v as Location).latitude === 'number' && typeof (v as Location).longitude === 'number';
 
 const dateFromUrl = () => parseLocalDate(new URLSearchParams(window.location.search).get('date') ?? '');
 
@@ -24,6 +33,8 @@ export default function App() {
   };
 
   const moon = useMemo(() => getMoonData(toJulianDate(date)), [date]);
+  const libration = useMemo(() => getLibration(toJulianDate(date)), [date]);
+  const day = toDateInputValue(date);
   const cycle = useMemo(() => lunarCycle(anchor), [anchor]);
   const nextNew = useMemo(() => findPhase(date, 0), [date]);
   const nextFull = useMemo(() => findPhase(date, 0.5), [date]);
@@ -35,6 +46,24 @@ export default function App() {
     ],
     [cycle],
   );
+
+  // Observer preferences, remembered per browser.
+  const [hemisphere, setHemisphere] = useState<Hemisphere>(() => load('luna.hemisphere', 'north', isHemisphere));
+  const [location, setLocation] = useState<Location | null>(() => load('luna.location', null, isLocation));
+  const [riseSet, setRiseSet] = useState<RiseSet | null>(null);
+
+  const changeHemisphere = (next: Hemisphere) => {
+    setHemisphere(next);
+    save('luna.hemisphere', next);
+  };
+
+  const changeLocation = (next: Location | null) => {
+    const stored = next && coarsen(next);
+    setLocation(stored);
+    save('luna.location', stored);
+    // Sharing a location answers the hemisphere question too.
+    if (stored) changeHemisphere(stored.latitude < 0 ? 'south' : 'north');
+  };
 
   const [headerRef, headerHeight] = useElementHeight<HTMLElement>();
   const [panelRef, panelHeight] = useElementHeight<HTMLElement>();
@@ -51,9 +80,24 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [date]);
 
+  // Moonrise/moonset for the selected local day, once a location is known.
+  useEffect(() => {
+    if (!location) {
+      setRiseSet(null);
+      return;
+    }
+    let cancelled = false;
+    setRiseSet(null);
+    moonRiseSet(date, location).then((result) => {
+      if (!cancelled) setRiseSet(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [day, location]);
+
   // Keep ?date=YYYY-MM-DD in the URL so a link reopens the same day. Today has
   // no param. Keyed on the day string so scrubbing doesn't spam history.
-  const day = toDateInputValue(date);
   useEffect(() => {
     const url = new URL(window.location.href);
     if (isSameLocalDay(date, new Date())) url.searchParams.delete('date');
@@ -63,7 +107,7 @@ export default function App() {
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col">
-      <MoonScene phase={moon.phase} topInset={headerHeight} bottomInset={panelHeight} />
+      <MoonScene phase={moon.phase} libration={libration} southern={hemisphere === 'south'} topInset={headerHeight} bottomInset={panelHeight} />
       <Header ref={headerRef} />
 
       {/* The moon's spot: the scene centres the moon in this gap. */}
@@ -76,6 +120,15 @@ export default function App() {
           <MoonInfo date={date} moon={moon} nextNew={nextNew} nextFull={nextFull} />
           <PhaseScrubber date={date} cycle={cycle} markers={markers} onScrub={setDate} />
           <DateControls date={date} isToday={isSameLocalDay(date, new Date())} onChange={goTo} />
+          <div className="border-t border-white/10 pt-4">
+            <ObserverControls
+              hemisphere={hemisphere}
+              onHemisphereChange={changeHemisphere}
+              location={location}
+              onLocationChange={changeLocation}
+              riseSet={riseSet}
+            />
+          </div>
         </div>
       </main>
     </div>
