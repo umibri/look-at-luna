@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { MoonPhases as MP, EmptyMoonData as EMD} from '@lib/constants';
 import { getJD, getDate } from '@lib/utils'
-import { MoonData } from '@lib/types'
+import type { MoonData } from '@lib/types'
+import { getMoonData } from '@lib/moon'
 
 export default function MoonCalculator() {
   const startDate = getDate();
@@ -10,25 +11,14 @@ export default function MoonCalculator() {
   const [moonPhaseText, setMoonPhaseText] = useState('');
   const [moonData, setMoonData] = useState<MoonData>(EMD);
 
-  async function handlePhaseChange(event?: React.MouseEvent<HTMLButtonElement>, date?: Date) {
+  function handlePhaseChange(event?: React.MouseEvent<HTMLButtonElement>, date?: Date) {
     event?.preventDefault();
 
     const jdVal = typeof date === 'undefined' ? getJD(displayDate) : getJD(date);
-    const data = { jd: jdVal };
-    const endpoint = '/api/calculatePhase';
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    };
+    const result = getMoonData(jdVal);
 
-    const res = await fetch(endpoint, options);
-    const result = await res.json();
-
-    setTimeout(() => setMoonData(result), 300);
-    setTimeout(() => setMoonPhaseText(convertPhaseString(result.phase)), 300);
+    setMoonData(result);
+    setMoonPhaseText(convertPhaseString(result.phase));
   }
 
 
