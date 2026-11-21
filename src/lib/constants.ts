@@ -18,53 +18,19 @@ export const AstronomicalConstants = {
   earth_radius: 6378.16,
 } as const;
 
-export const PrecisionConstants = {
-  PRECISION: 0.05,
-  NEW: 0 / 4.0,
-  FIRST: 1 / 4.0,
-  FULL: 2 / 4.0,
-  LAST: 3 / 4.0,
-  NEXTNEW: 4 / 4.0,
-} as const;
-
-export const MoonPhases = [
-  {
-    phaseText: 'New Moon',
-    illuminated: PrecisionConstants.NEW + PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Waxing Crescent',
-    illuminated: PrecisionConstants.FIRST - PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'First Quarter',
-    illuminated: PrecisionConstants.FIRST + PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Waxing Gibbous',
-    illuminated: PrecisionConstants.FULL - PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Full Moon',
-    illuminated: PrecisionConstants.FULL + PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Waning Gibbous',
-    illuminated: PrecisionConstants.LAST - PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Last Quarter',
-    illuminated: PrecisionConstants.LAST + PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'Waning Crescent',
-    illuminated: PrecisionConstants.NEXTNEW - PrecisionConstants.PRECISION,
-  },
-  {
-    phaseText: 'New Moon',
-    illuminated: PrecisionConstants.NEXTNEW + PrecisionConstants.PRECISION,
-  }
+/** Phase names in cycle order; each is centered on a multiple of 1/8 of the cycle. */
+export const PhaseNames = [
+  'New Moon',
+  'Waxing Crescent',
+  'First Quarter',
+  'Waxing Gibbous',
+  'Full Moon',
+  'Waning Gibbous',
+  'Last Quarter',
+  'Waning Crescent',
 ] as const;
+
+export type PhaseName = (typeof PhaseNames)[number];
 
 export const EmptyMoonData = {
   phase: 0,

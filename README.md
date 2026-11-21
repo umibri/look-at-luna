@@ -17,7 +17,7 @@ npm run build      # typecheck + production build to dist/
 
 ## Roadmap
 - [x] **Phase 0 — Housekeeping:** Next 12 → Vite, React 19, R3F 9; Tailwind 4; remove debug code; 4k texture (5.1 MB → 1.2 MB); Vitest
-- [ ] **Phase 1 — Correct core:** fix `getJD` (drops time of day) and the stale-date bug in `MoonCalculator`; centered 8-bin `phaseName`; tests against published new/full moon times
+- [x] **Phase 1 — Correct core:** exact `toJulianDate`; stale-date bug fixed; centered 8-bin `phaseName`; tests against published new/full moons and `astronomy-engine` (max error 0.33°, ~38 min, over 1950–2050)
 - [ ] **Phase 2 — Wire the moon to the data:** directional light at `(sin θ, 0, −cos θ)` with `θ = 2π·phase`; camera on +Z; no per-frame `setState`
 - [ ] **Phase 3 — Date UX:** day stepping, month scrubber, `?date=` URL, info panel with next new/full moon
 - [ ] **Phase 4 — Aesthetic pass:** full-bleed scene, typography, loading state, mobile layout

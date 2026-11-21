@@ -1,4 +1,4 @@
-import { AstronomicalConstants as AC } from '@lib/constants';
+import { AstronomicalConstants as AC, PhaseNames, type PhaseName } from '@lib/constants';
 import { fixangle, torad, todeg, kepler } from '@lib/calculations';
 import type { MoonData } from '@lib/types';
 
@@ -49,4 +49,13 @@ export function getMoonData(jd: number): MoonData {
   }
 
   return res;
+}
+/**
+ * Name for a phase fraction (0 = new, 0.5 = full). The cycle is split into
+ * 8 equal bins centered on the principal and intermediate phases, so
+ * "Full Moon" covers 0.4375-0.5625 (about 1.8 days either side of full).
+ */
+export function phaseName(phase: number): PhaseName {
+  const index = ((Math.round(phase * 8) % 8) + 8) % 8;
+  return PhaseNames[index];
 }
