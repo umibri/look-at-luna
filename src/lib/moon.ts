@@ -1,6 +1,7 @@
 import { AstronomicalConstants as AC, PhaseNames, type PhaseName } from '@lib/constants';
 import { fixangle, torad, todeg, kepler } from '@lib/calculations';
 import type { MoonData } from '@lib/types';
+import { MS_PER_DAY, toJulianDate } from '@lib/utils';
 
 /**
  * Moon phase and position for a Julian Date.
@@ -76,4 +77,43 @@ export function phaseName(phase: number): PhaseName {
 export function sunDirection(phase: number): [number, number, number] {
   const theta = 2 * Math.PI * phase;
   return [Math.sin(theta), 0, -Math.cos(theta)];
+}
+
+const SYNODIC_MS = AC.synodic_month * MS_PER_DAY;
+
+/** Phase fraction at an instant. */
+const phaseAt = (t: number) => getMoonData(toJulianDate(new Date(t))).phase;
+
+/** `x` wrapped into [-0.5, 0.5). */
+const wrapHalf = (x: number) => x - Math.floor(x + 0.5);
+
+/**
+ * The next (or previous) instant after `from` when the moon reaches `target`
+ * phase (0 = new, 0.25 = first quarter, 0.5 = full, 0.75 = last quarter).
+ *
+ * Starts from a mean-motion estimate, then corrects it a few times: the moon's
+ * real speed varies by about ±10% around its mean, so each step closes most of
+ * the remaining gap and five steps reach well under a second.
+ */
+export function findPhase(from: Date, target: number, direction: 1 | -1 = 1): Date {
+  const t0 = from.getTime();
+  const ahead = (((target - phaseAt(t0)) % 1) + 1) % 1; // 0..1 of a cycle until target
+  let t = t0 + (direction === 1 ? ahead : ahead - 1) * SYNODIC_MS;
+
+  for (let i = 0; i < 5; i++) {
+    t += wrapHalf(target - phaseAt(t)) * SYNODIC_MS;
+  }
+
+  // If `from` sits right on the target, the estimate can land back on `from`
+  // itself (or on the wrong side of it); step one cycle in `direction`.
+  if (direction === 1 ? t <= t0 + 60_000 : t >= t0 - 60_000) {
+    return findPhase(new Date(t0 + direction * 0.5 * SYNODIC_MS), target, direction);
+  }
+  return new Date(t);
+}
+
+/** The new moons that bracket `date`: the lunation (lunar cycle) it falls in. */
+export function lunarCycle(date: Date): { start: Date; end: Date } {
+  const start = findPhase(new Date(date.getTime() + 1), 0, -1);
+  return { start, end: findPhase(start, 0, 1) };
 }
