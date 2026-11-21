@@ -1,39 +1,31 @@
 import { useState } from 'react';
-import { EmptyMoonData as EMD } from '@lib/constants';
-import { toJulianDate, parseLocalDate } from '@lib/utils';
+import { parseLocalDate } from '@lib/utils';
 import type { MoonData } from '@lib/types';
-import { getMoonData, phaseName } from '@lib/moon';
+import { phaseName } from '@lib/moon';
 
-export default function MoonCalculator() {
+interface Props {
+  date: Date;
+  moon: MoonData;
+  onDateChange: (date: Date) => void;
+}
+
+export default function MoonCalculator({ date, moon, onDateChange }: Props) {
   const [today] = useState(() => new Date());
-  const [displayDate, setDisplayDate] = useState(today);
   const [inputDate, setInputDate] = useState('');
-  const [moonPhaseText, setMoonPhaseText] = useState('');
   const [error, setError] = useState('');
-  const [moonData, setMoonData] = useState<MoonData>(EMD);
 
-  // Takes the date explicitly instead of reading `displayDate` from state:
-  // a setState call doesn't update the value this render's closure sees.
-  function showPhaseFor(date: Date) {
-    const result = getMoonData(toJulianDate(date));
-
+  function changeDate(next: Date) {
     setError('');
-    setDisplayDate(date);
-    setMoonData(result);
-    setMoonPhaseText(phaseName(result.phase));
+    onDateChange(next);
   }
 
   function handleInputPhaseChange() {
-    const date = parseLocalDate(inputDate);
-
-    if (!date) {
+    const parsed = parseLocalDate(inputDate);
+    if (!parsed) {
       setError('Pick a date first.');
-      setMoonPhaseText('');
-      setMoonData(EMD);
       return;
     }
-
-    showPhaseFor(date);
+    changeDate(parsed);
   }
 
   return (
@@ -43,7 +35,7 @@ export default function MoonCalculator() {
           <p>{today.toDateString()}</p>
 
           <div className="text-center my-4">
-            <button className="py-2 px-4 bg-slate-500 text-sm" onClick={() => showPhaseFor(new Date())}>{`Today's Phase`}</button>
+            <button className="py-2 px-4 bg-slate-500 text-sm" onClick={() => changeDate(new Date())}>{`Today's Phase`}</button>
           </div>
         </div>
 
@@ -54,13 +46,12 @@ export default function MoonCalculator() {
       </div>
 
       <div>
-        {error
-          ? <p className="text-center mb-2 text-red-300">{error}</p>
-          : <p className="text-center mb-2">{displayDate.toDateString()}</p>}
+        {error && <p className="text-center mb-2 text-red-300">{error}</p>}
+        <p className="text-center mb-2">{date.toDateString()}</p>
 
-        <div className="bg-slate-400 text-center">{moonPhaseText}</div>
-        {Object.keys(moonData).map((item) => (
-          <div key={item}>{item}: {moonData[item]}</div>
+        <div className="bg-slate-400 text-center">{phaseName(moon.phase)}</div>
+        {Object.keys(moon).map((item) => (
+          <div key={item}>{item}: {moon[item]}</div>
         ))}
       </div>
     </div>

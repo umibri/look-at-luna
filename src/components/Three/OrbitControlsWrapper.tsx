@@ -7,8 +7,8 @@ export const OrbitControlsWrapper = () => {
     enableRotate: false,
     enableZoom: true,
     reverseOrbit: false,
-    minDistance: 10,
-    maxDistance: 250,
+    minDistance: 8,
+    maxDistance: 60,
   };
 
   return <OrbitControls {...args} />;

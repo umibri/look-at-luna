@@ -59,3 +59,21 @@ export function phaseName(phase: number): PhaseName {
   const index = ((Math.round(phase * 8) % 8) + 8) % 8;
   return PhaseNames[index];
 }
+
+/**
+ * Unit vector from the moon toward the sun, in a scene where the viewer
+ * (Earth) is on +Z looking at the moon at the origin, +X is to the viewer's
+ * right and +Y is up. Northern-hemisphere view: the waxing moon is lit on
+ * the right.
+ *
+ * The phase fraction is just the sun-moon elongation as a fraction of a
+ * turn, so the angle is θ = 2π · phase:
+ *   phase 0    → ( 0, 0, -1)  sun behind the moon      New
+ *   phase 0.25 → ( 1, 0,  0)  right half lit           First Quarter
+ *   phase 0.5  → ( 0, 0,  1)  sun behind the viewer    Full
+ *   phase 0.75 → (-1, 0,  0)  left half lit            Last Quarter
+ */
+export function sunDirection(phase: number): [number, number, number] {
+  const theta = 2 * Math.PI * phase;
+  return [Math.sin(theta), 0, -Math.cos(theta)];
+}

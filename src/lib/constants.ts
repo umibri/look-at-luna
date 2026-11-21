@@ -31,13 +31,3 @@ export const PhaseNames = [
 ] as const;
 
 export type PhaseName = (typeof PhaseNames)[number];
-
-export const EmptyMoonData = {
-  phase: 0,
-  illuminated: 0,
-  age: 0,
-  distance: 0,
-  angular_diameter: 0,
-  sun_distance: 0,
-  sun_angular_diameter: 0,
-} as const;
