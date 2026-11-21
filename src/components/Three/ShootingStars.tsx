@@ -4,8 +4,8 @@ import { AdditiveBlending, Quaternion, ShaderMaterial, Vector3, type Mesh } from
 import type { SceneState } from '@components/Three/sceneConstants';
 
 /** Seconds between meteors: random within this range, so they stay a surprise. */
-const GAP = [9, 22] as const;
-const FIRST_GAP = [3, 7] as const;
+const GAP = [6, 14] as const;
+const FIRST_GAP = [2, 5] as const;
 /** How long one streak lasts, in seconds. */
 const DURATION = 0.9;
 /** Distance in front of the camera where streaks are drawn (in front of the stars, well behind the moon's edge). */
@@ -45,7 +45,7 @@ interface Meteor {
 
 /**
  * An occasional meteor: a faint streak across a random part of the sky
- * every 9-22 seconds, dimmer when moonlight washes the sky out. Off when the
+ * every 6-14 seconds, dimmer when moonlight washes the sky out. Off when the
  * viewer prefers reduced motion (the parent doesn't render it).
  */
 export default function ShootingStars({ scene }: { scene: RefObject<SceneState> }) {
