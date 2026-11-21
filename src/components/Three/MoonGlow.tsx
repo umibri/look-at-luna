@@ -4,9 +4,9 @@ import { AdditiveBlending, Quaternion, Vector3, type Mesh, ShaderMaterial } from
 import { MOON_RADIUS, type SceneState } from '@components/Three/sceneConstants';
 
 /** Halo extent beyond the limb, as a multiple of the moon's radius. */
-const REACH = 0.6;
-/** Peak halo strength at full moon. Kept low: a soft haze, not a bloom. */
-const STRENGTH = 0.32;
+const REACH = 0.35;
+/** Peak halo strength at full moon. Kept low: a soft rim, not a bloom. */
+const STRENGTH = 0.13;
 
 const vertexShader = /* glsl */ `
   varying vec2 vPos;
@@ -28,7 +28,7 @@ const fragmentShader = /* glsl */ `
     float r = length(vPos);
     if (r < uRadius) discard;
     float t = (r - uRadius) / (uRadius * uReach);
-    float falloff = exp(-4.0 * t) * (1.0 - smoothstep(0.7, 1.0, t));
+    float falloff = exp(-6.0 * t) * (1.0 - smoothstep(0.6, 1.0, t));
     // Hug the lit limb: weight by how much this side faces the sun.
     float facing = dot(normalize(vPos), normalize(uSun + 1e-5));
     float side = mix(1.0, smoothstep(-0.2, 1.0, facing), uSunSide);
