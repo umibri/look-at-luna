@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function MoonObject({ phase }: Props) {
-  const colorMap = useLoader(TextureLoader, '/textures/moon.jpg');
+  const colorMap = useLoader(TextureLoader, `${import.meta.env.BASE_URL}textures/moon.jpg`);
   colorMap.colorSpace = SRGBColorSpace;
 
   const light = useRef<DirectionalLight>(null);

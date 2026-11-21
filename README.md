@@ -15,6 +15,11 @@ npm test           # unit tests
 npm run build      # typecheck + production build to dist/
 ```
 
+## Deploy
+Pushes to `main` run [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
+tests, build, then publish `dist/` to GitHub Pages. Asset paths are relative
+(`base: './'` in `vite.config.ts`), so the site works under any repo name.
+
 ## Roadmap
 - [x] **Phase 0 — Housekeeping:** Next 12 → Vite, React 19, R3F 9; Tailwind 4; remove debug code; 4k texture (5.1 MB → 1.2 MB); Vitest
 - [x] **Phase 1 — Correct core:** exact `toJulianDate`; stale-date bug fixed; centered 8-bin `phaseName`; tests against published new/full moons and `astronomy-engine` (max error 0.33°, ~38 min, over 1950–2050)
