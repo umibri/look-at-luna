@@ -5,7 +5,13 @@ Look at the phase of the moon for today or for any date.
 Vite · React 19 · React Three Fiber 9 / drei · Tailwind CSS 4 · Vitest
 
 The phase math (`src/lib/moon.ts`) is a TypeScript port of John Walker's
-*moontool* algorithm and runs entirely in the browser — there is no backend.
+*moontool* algorithm and libration (`src/lib/libration.ts`) follows Meeus,
+*Astronomical Algorithms*; both run entirely in the browser — there is no
+backend. Moonrise/moonset uses [astronomy-engine](https://github.com/cosinekitty/astronomy),
+which is also the test oracle for the app's own math.
+
+Location, if shared, is rounded to 0.1° and kept only in the browser's
+localStorage, along with the hemisphere preference.
 
 ## Scripts
 ```bash
@@ -26,7 +32,7 @@ tests, build, then publish `dist/` to GitHub Pages. Asset paths are relative
 - [x] **Phase 2 — Wire the moon to the data:** date state lives in `App`; directional light from `sunDirection(phase)` = `(sin θ, 0, −cos θ)`, eased via a ref (no per-frame `setState`); camera on +Z with the near side facing it
 - [x] **Phase 3 — Date UX:** ◀/▶ day stepping and ←/→ keys, controlled date picker, Today; lunar-cycle scrubber (new moon → new moon); `?date=` URL; info panel with illumination, age, distance, next new/full moon (`findPhase`)
 - [x] **Phase 4 — Aesthetic pass:** full-bleed scene with a camera rig that centres the moon in the space the UI leaves; Cormorant Garamond + Inter; glass info panel; scrubber with quarter/full markers; bump-mapped terminator; loading veil; SVG favicon; phone layout
-- [ ] **Phase 5 — Stretch:** hemisphere toggle, libration, moonrise/set, deploy (GitHub Pages)
+- [x] **Phase 5 — Observer:** Northern/Southern hemisphere view; optical libration (Meeus ch. 53, within 0.12° of astronomy-engine) wobbles the moon month to month; moonrise/moonset from the viewer's location (astronomy-engine, loaded on demand); deployed to GitHub Pages
 
 ## Inspiration
 - https://codepen.io/seanseansean/pen/vEjOvy
