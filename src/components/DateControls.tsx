@@ -2,22 +2,24 @@ import { addDays, parseLocalDate, toDateInputValue } from '@lib/utils';
 
 interface Props {
   date: Date;
+  isToday: boolean;
   onChange: (date: Date) => void;
 }
 
-const buttonClass =
-  'px-3 py-2 rounded bg-slate-700 hover:bg-slate-600 text-sm disabled:opacity-40';
+const control =
+  'h-9 rounded-full border border-white/10 bg-white/5 text-sm transition-colors hover:bg-white/10 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moonlight/60 disabled:opacity-40 disabled:hover:bg-white/5';
 
-export default function DateControls({ date, onChange }: Props) {
+export default function DateControls({ date, isToday, onChange }: Props) {
   return (
     <div className="flex items-center justify-center gap-2">
-      <button className={buttonClass} onClick={() => onChange(addDays(date, -1))} aria-label="Previous day" title="Previous day (←)">
-        ◀
+      <button className={`${control} w-9`} onClick={() => onChange(addDays(date, -1))} aria-label="Previous day" title="Previous day (←)">
+        ‹
       </button>
 
       <input
         type="date"
-        className="px-3 py-1.5 rounded bg-slate-800 text-sm"
+        className={`${control} px-4 tabular-nums`}
         value={toDateInputValue(date)}
         onChange={(event) => {
           // Partially typed dates come through as ''; ignore until complete.
@@ -27,11 +29,11 @@ export default function DateControls({ date, onChange }: Props) {
         aria-label="Date"
       />
 
-      <button className={buttonClass} onClick={() => onChange(addDays(date, 1))} aria-label="Next day" title="Next day (→)">
-        ▶
+      <button className={`${control} w-9`} onClick={() => onChange(addDays(date, 1))} aria-label="Next day" title="Next day (→)">
+        ›
       </button>
 
-      <button className={buttonClass} onClick={() => onChange(new Date())}>
+      <button className={`${control} px-4`} onClick={() => onChange(new Date())} disabled={isToday}>
         Today
       </button>
     </div>
