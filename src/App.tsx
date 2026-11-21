@@ -37,6 +37,19 @@ function loadSavedLocation(): Location | null {
 /** A whole lunar cycle plays in this many seconds. */
 const PLAY_SECONDS = 8;
 
+/** The eight named phases, with the new moon again at the end of the cycle. */
+const PHASE_MARKS = [
+  { short: 'New', name: 'New Moon' },
+  { short: 'Crescent', name: 'Waxing Crescent' },
+  { short: 'First Q', name: 'First Quarter' },
+  { short: 'Gibbous', name: 'Waxing Gibbous' },
+  { short: 'Full', name: 'Full Moon' },
+  { short: 'Gibbous', name: 'Waning Gibbous' },
+  { short: 'Last Q', name: 'Last Quarter' },
+  { short: 'Crescent', name: 'Waning Crescent' },
+  { short: 'New', name: 'New Moon' },
+];
+
 const dateFromUrl = () => parseLocalDate(new URLSearchParams(window.location.search).get('date') ?? '');
 
 export default function App() {
@@ -67,12 +80,13 @@ export default function App() {
   const cycle = useMemo(() => lunarCycle(anchor), [anchor]);
   const nextNew = useMemo(() => findPhase(date, 0), [date]);
   const nextFull = useMemo(() => findPhase(date, 0.5), [date]);
-  const markers = useMemo(
-    () => [
-      { label: 'First Q', at: findPhase(cycle.start, 0.25) },
-      { label: 'Full', at: findPhase(cycle.start, 0.5) },
-      { label: 'Last Q', at: findPhase(cycle.start, 0.75) },
-    ],
+  const marks = useMemo(
+    () =>
+      PHASE_MARKS.map((mark, i) => ({
+        ...mark,
+        phase: i / 8,
+        at: i === 0 ? cycle.start : i === 8 ? cycle.end : findPhase(cycle.start, i / 8),
+      })),
     [cycle],
   );
 
@@ -198,7 +212,7 @@ export default function App() {
       <main ref={panelRef} className="relative z-10 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-2xl flex flex-col gap-5 rounded-3xl border border-white/10 bg-night/55 p-5 desktop:p-7 backdrop-blur-md">
           <MoonInfo date={date} moon={moon} nextNew={nextNew} nextFull={nextFull} />
-          <PhaseScrubber date={date} cycle={cycle} markers={markers} onScrub={scrubTo} playing={playing} onTogglePlay={togglePlay} />
+          <PhaseScrubber date={date} phase={moon.phase} cycle={cycle} marks={marks} southern={hemisphere === 'south'} onScrub={scrubTo} playing={playing} onTogglePlay={togglePlay} />
           <DateControls date={date} isToday={isSameLocalDay(date, new Date())} onChange={goTo} />
           <div className="border-t border-white/10 pt-4">
             <ObserverControls

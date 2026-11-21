@@ -1,18 +1,25 @@
 import { useMemo, useRef, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { AdditiveBlending, BufferAttribute, BufferGeometry, ShaderMaterial, type Points } from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, ShaderMaterial, type Group } from 'three';
+import MilkyWay from '@components/Three/MilkyWay';
 import type { SceneState } from '@components/Three/sceneConstants';
 
+/** Stars scattered evenly over the sky. */
 const COUNT = 4200;
+/** Extra stars crowded along the Milky Way band. */
+const BAND_COUNT = 3000;
 /** How much a full moon washes out the stars (0 = not at all, 1 = completely). */
-const MOONLIGHT_WASHOUT = 0.5;
+const MOONLIGHT_WASHOUT = 0.35;
 /**
  * The whole sky turns slowly, as it does with Earth's rotation, sped up to one
  * turn every 40 minutes: a couple of pixels a second, enough to feel alive.
  */
 const DRIFT_RADIANS_PER_SECOND = (2 * Math.PI) / (40 * 60);
-/** Tilt of the drift axis, so stars wheel diagonally instead of sliding flat. */
-const DRIFT_AXIS_TILT = 0.5;
+/**
+ * Tilt of the drift axis. The Milky Way lies on the drift's equator, so it
+ * crosses the view diagonally and slides along itself as the sky turns.
+ */
+const SKY_TILT: [number, number, number] = [0.12, 0, 0.6];
 
 /** Small deterministic PRNG so the sky is the same on every load. */
 function mulberry32(seed: number) {
@@ -91,33 +98,37 @@ interface Props {
 }
 
 /**
- * The star field: tinted stars that twinkle, slowly wheel across the sky,
- * and fade as the moon brightens, the way moonlight washes out the real sky.
+ * The star field: tinted stars that twinkle, a faint Milky Way, all slowly
+ * wheeling across the sky, and fading as the moon brightens, the way moonlight washes out the real sky.
  */
 export default function StarrySky({ scene, animate }: Props) {
   const pixelRatio = useThree((s) => s.viewport.dpr);
-  const points = useRef<Points>(null);
+  const sky = useRef<Group>(null);
 
   const geometry = useMemo(() => {
     const random = mulberry32(20261120);
-    const positions = new Float32Array(COUNT * 3);
-    const colors = new Float32Array(COUNT * 3);
-    const sizes = new Float32Array(COUNT);
-    const base = new Float32Array(COUNT);
-    const seeds = new Float32Array(COUNT);
+    const total = COUNT + BAND_COUNT;
+    const positions = new Float32Array(total * 3);
+    const colors = new Float32Array(total * 3);
+    const sizes = new Float32Array(total);
+    const base = new Float32Array(total);
+    const seeds = new Float32Array(total);
 
-    for (let i = 0; i < COUNT; i++) {
-      // Uniform on a sphere shell around the moon.
-      const u = random() * 2 - 1;
+    for (let i = 0; i < total; i++) {
+      const inBand = i >= COUNT;
+      // Height above the band's plane: uniform for the open sky, bunched
+      // near zero (roughly Gaussian) for the band.
+      const u = inBand ? (random() + random() + random() - 1.5) * 0.22 : random() * 2 - 1;
       const theta = random() * Math.PI * 2;
       const r = 110 + random() * 60;
       const s = Math.sqrt(1 - u * u);
-      positions.set([r * s * Math.cos(theta), r * s * Math.sin(theta), r * u], i * 3);
+      positions.set([r * s * Math.cos(theta), r * u, r * s * Math.sin(theta)], i * 3);
 
-      // Mostly faint pinpricks, a handful of bright ones.
+      // Mostly faint pinpricks, a handful of bright ones. Band stars are
+      // smaller and dimmer: a dusting, not a wall.
       const bright = random() ** 7;
-      sizes[i] = 1.1 + bright * 3.6;
-      base[i] = 0.3 + 0.7 * Math.max(bright * 1.4, random() * 0.55);
+      sizes[i] = inBand ? 0.9 + bright * 1.6 : 1.2 + bright * 3.8;
+      base[i] = inBand ? 0.25 + 0.45 * random() : 0.4 + 0.6 * Math.max(bright * 1.4, random() * 0.6);
       seeds[i] = random();
       colors.set(TINTS[Math.floor(random() * TINTS.length)], i * 3);
     }
@@ -161,12 +172,15 @@ export default function StarrySky({ scene, animate }: Props) {
     brightness.current += (target - brightness.current) * (1 - Math.exp(-4 * dt));
     u.uBrightness.value = brightness.current;
 
-    if (animate && points.current) points.current.rotation.y += DRIFT_RADIANS_PER_SECOND * Math.min(dt, 0.1);
+    if (animate && sky.current) sky.current.rotation.y += DRIFT_RADIANS_PER_SECOND * Math.min(dt, 0.1);
   });
 
   return (
-    <group rotation={[DRIFT_AXIS_TILT, 0, 0.2]}>
-      <points ref={points} geometry={geometry} material={material} frustumCulled={false} />
+    <group rotation={SKY_TILT}>
+      <group ref={sky}>
+        <MilkyWay brightness={brightness} />
+        <points geometry={geometry} material={material} frustumCulled={false} />
+      </group>
     </group>
   );
 }
