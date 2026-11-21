@@ -1,33 +1,52 @@
-import { useRef, useState } from 'react';
-import { useLoader, useFrame } from '@react-three/fiber';
-import { TextureLoader } from 'three';
-import { Bounds } from '@react-three/drei';
+import { useRef } from 'react';
+import { useFrame, useLoader } from '@react-three/fiber';
+import { SRGBColorSpace, TextureLoader, type DirectionalLight } from 'three';
+import { sunDirection } from '@lib/moon';
 
-export default function MoonObject() {
+const MOON_RADIUS = 5;
+const SUN_DISTANCE = 100;
+/** How quickly the light eases toward a new phase (higher is faster). */
+const EASE_RATE = 6;
+
+/** Shortest signed angle from `from` to `to`, in [-π, π). */
+const shortestArc = (from: number, to: number) =>
+  ((((to - from + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+
+interface Props {
+  /** Fraction of the lunar cycle: 0 = new, 0.5 = full. */
+  phase: number;
+}
+
+export default function MoonObject({ phase }: Props) {
   const colorMap = useLoader(TextureLoader, '/textures/moon.jpg');
-  const [someX, setSomeX] = useState(0);
-  const [someZ, setSomeZ] = useState(0);
-  const ref = useRef(null);
-  const r = 30;
+  colorMap.colorSpace = SRGBColorSpace;
 
-  // TODO(phase 2): drive the light from the computed phase instead of a timer,
-  // and mutate it through the ref rather than setState on every frame.
-  function animatePhase() {
-    setSomeX(r * Math.cos(Date.now() / 1000));
-    setSomeZ(r * Math.sin(Date.now() / 1000));
-  }
+  const light = useRef<DirectionalLight>(null);
+  // Current (animated) phase, kept outside React state so frames don't re-render.
+  const shown = useRef(phase);
 
-  useFrame(() => animatePhase());
+  useFrame((_, dt) => {
+    const target = phase * 2 * Math.PI;
+    const current = shown.current * 2 * Math.PI;
+    const step = shortestArc(current, target) * (1 - Math.exp(-EASE_RATE * dt));
+    shown.current = (current + step) / (2 * Math.PI);
+
+    const [x, y, z] = sunDirection(shown.current);
+    light.current?.position.set(x * SUN_DISTANCE, y * SUN_DISTANCE, z * SUN_DISTANCE);
+  });
 
   return (
-    <Bounds fit observe margin={1.5}>
-      <ambientLight intensity={0.04} />
-      <pointLight position={[someX, 0, someZ]} intensity={1} decay={0} ref={ref} />
+    <>
+      {/* Earthshine: just enough to make out the dark side. */}
+      <ambientLight intensity={0.03} />
+      <directionalLight ref={light} intensity={3} />
 
-      <mesh receiveShadow>
-        <sphereGeometry args={[5, 50, 50]} />
-        <meshStandardMaterial map={colorMap} />
+      {/* The texture's 0° longitude (near-side centre) sits on +X by default;
+          turn it to face the viewer on +Z. */}
+      <mesh rotation-y={-Math.PI / 2}>
+        <sphereGeometry args={[MOON_RADIUS, 96, 64]} />
+        <meshStandardMaterial map={colorMap} roughness={1} metalness={0} />
       </mesh>
-    </Bounds>
+    </>
   );
 }

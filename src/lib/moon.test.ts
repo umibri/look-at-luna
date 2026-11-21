@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Body, Illumination, MoonPhase } from 'astronomy-engine';
-import { getMoonData, phaseName } from '@lib/moon';
+import { getMoonData, phaseName, sunDirection } from '@lib/moon';
 import { toJulianDate, parseLocalDate } from '@lib/utils';
 
 const at = (iso: string) => getMoonData(toJulianDate(new Date(iso)));
@@ -111,5 +111,26 @@ describe('phaseName', () => {
     expect(phaseName(0.0626)).toBe('Waxing Crescent');
     expect(phaseName(0.5624)).toBe('Full Moon');
     expect(phaseName(0.5626)).toBe('Waning Gibbous');
+  });
+});
+
+describe('sunDirection', () => {
+  const expectVec = (actual: number[], expected: number[]) =>
+    actual.forEach((v, i) => expect(v).toBeCloseTo(expected[i], 10));
+
+  it('puts the sun behind the moon at new and behind the viewer at full', () => {
+    expectVec(sunDirection(0), [0, 0, -1]);
+    expectVec(sunDirection(0.5), [0, 0, 1]);
+  });
+
+  it('lights the right half at first quarter and the left at last quarter', () => {
+    expectVec(sunDirection(0.25), [1, 0, 0]);
+    expectVec(sunDirection(0.75), [-1, 0, 0]);
+  });
+
+  it('is always a unit vector', () => {
+    for (let p = 0; p < 1; p += 0.01) {
+      expect(Math.hypot(...sunDirection(p))).toBeCloseTo(1, 10);
+    }
   });
 });
