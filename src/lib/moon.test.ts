@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Body, Illumination, MoonPhase } from 'astronomy-engine';
-import { getMoonData, phaseName, sunDirection } from '@lib/moon';
-import { toJulianDate, parseLocalDate } from '@lib/utils';
+import { findPhase, getMoonData, lunarCycle, phaseName, sunDirection } from '@lib/moon';
+import { addDays, isSameLocalDay, parseLocalDate, toDateInputValue, toJulianDate } from '@lib/utils';
+
+/** Within 1.5 h of a published time (the algorithm's worst case is ~38 min). */
+const near = (actual: Date, iso: string) =>
+  expect(Math.abs(actual.getTime() - new Date(iso).getTime())).toBeLessThan(1.5 * 3_600_000);
 
 const at = (iso: string) => getMoonData(toJulianDate(new Date(iso)));
 
@@ -132,5 +136,55 @@ describe('sunDirection', () => {
     for (let p = 0; p < 1; p += 0.01) {
       expect(Math.hypot(...sunDirection(p))).toBeCloseTo(1, 10);
     }
+  });
+});
+
+describe('findPhase', () => {
+  it('finds the next new and full moon', () => {
+    near(findPhase(new Date('2025-11-01T00:00Z'), 0), '2025-11-20T06:47Z');
+    near(findPhase(new Date('2026-02-20T00:00Z'), 0.5), '2026-03-03T11:38Z');
+  });
+
+  it('finds the previous one when searching backwards', () => {
+    near(findPhase(new Date('2026-03-10T00:00Z'), 0.5, -1), '2026-03-03T11:38Z');
+    near(findPhase(new Date('2026-03-01T00:00Z'), 0, -1), '2026-02-17T12:01Z');
+  });
+
+  it('skips to the following cycle when starting exactly on the target', () => {
+    const full = findPhase(new Date('2026-02-20T00:00Z'), 0.5);
+    const next = findPhase(full, 0.5);
+    const days = (next.getTime() - full.getTime()) / 86_400_000;
+    expect(days).toBeGreaterThan(29);
+    expect(days).toBeLessThan(30);
+  });
+
+  it('lands exactly on the target phase', () => {
+    for (const target of [0, 0.25, 0.5, 0.75]) {
+      const t = findPhase(new Date('2026-06-01T00:00Z'), target);
+      expect(cycleDistance(getMoonData(toJulianDate(t)).phase, target)).toBeLessThan(1e-6);
+    }
+  });
+});
+
+describe('lunarCycle', () => {
+  it('brackets the date between consecutive new moons', () => {
+    const date = new Date('2025-12-04T23:14Z');
+    const { start, end } = lunarCycle(date);
+    near(start, '2025-11-20T06:47Z');
+    expect(start.getTime()).toBeLessThan(date.getTime());
+    expect(end.getTime()).toBeGreaterThan(date.getTime());
+    const days = (end.getTime() - start.getTime()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.2);
+    expect(days).toBeLessThan(29.9);
+  });
+});
+
+describe('date helpers', () => {
+  it('formats the local day and steps by calendar days', () => {
+    const d = new Date(2026, 0, 31, 12);
+    expect(toDateInputValue(d)).toBe('2026-01-31');
+    expect(toDateInputValue(addDays(d, 1))).toBe('2026-02-01');
+    expect(addDays(d, -1).getHours()).toBe(12);
+    expect(isSameLocalDay(d, new Date(2026, 0, 31, 23, 59))).toBe(true);
   });
 });
