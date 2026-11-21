@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { SRGBColorSpace, TextureLoader, type DirectionalLight } from 'three';
 import { sunDirection } from '@lib/moon';
+import { MOON_RADIUS } from '@components/Three/sceneConstants';
 
-const MOON_RADIUS = 5;
 const SUN_DISTANCE = 100;
 /** How quickly the light eases toward a new phase (higher is faster). */
 const EASE_RATE = 6;
@@ -45,7 +45,8 @@ export default function MoonObject({ phase }: Props) {
           turn it to face the viewer on +Z. */}
       <mesh rotation-y={-Math.PI / 2}>
         <sphereGeometry args={[MOON_RADIUS, 96, 64]} />
-        <meshStandardMaterial map={colorMap} roughness={1} metalness={0} />
+        {/* The colour map doubles as a bump map: craters catch light along the terminator. */}
+        <meshStandardMaterial map={colorMap} bumpMap={colorMap} bumpScale={0.04} roughness={1} metalness={0} />
       </mesh>
     </>
   );
