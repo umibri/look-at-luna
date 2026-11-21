@@ -34,6 +34,9 @@ function loadSavedLocation(): Location | null {
   return { latitude: saved.latitude, longitude: saved.longitude, timeZone: browserTimeZone() ?? 'UTC', label: 'Your location', source: 'device' };
 }
 
+/** A whole lunar cycle plays in this many seconds. */
+const PLAY_SECONDS = 8;
+
 const dateFromUrl = () => parseLocalDate(new URLSearchParams(window.location.search).get('date') ?? '');
 
 export default function App() {
@@ -43,9 +46,19 @@ export default function App() {
   // not the anchor, so the slider's ends stay put while you drag.
   const [anchor, setAnchor] = useState(date);
 
+  // Playing runs the date through the current cycle like a time-lapse. Any
+  // manual date change stops it.
+  const [playing, setPlaying] = useState(false);
+
   const goTo = (next: Date) => {
+    setPlaying(false);
     setDate(next);
     setAnchor(next);
+  };
+
+  const scrubTo = (next: Date) => {
+    setPlaying(false);
+    setDate(next);
   };
 
   const moon = useMemo(() => getMoonData(toJulianDate(date)), [date]);
@@ -103,6 +116,35 @@ export default function App() {
 
   const [riseSet, setRiseSet] = useState<RiseSet | null>(null);
 
+  const togglePlay = () => {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    // From the end of the cycle, start over from its first new moon.
+    if (cycle.end.getTime() - date.getTime() < 3_600_000) setDate(cycle.start);
+    setPlaying(true);
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    const start = cycle.start.getTime();
+    const end = cycle.end.getTime();
+    const msPerSecond = (end - start) / PLAY_SECONDS;
+    // Advance from where we are; the loop owns the clock while playing.
+    let t = Math.max(start, Math.min(date.getTime(), end));
+    if (end - t < 3_600_000) t = start;
+    let last = performance.now();
+    let frame = requestAnimationFrame(function step(now) {
+      t = Math.min(end, t + ((now - last) / 1000) * msPerSecond);
+      last = now;
+      setDate(new Date(t));
+      if (t >= end) setPlaying(false);
+      else frame = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [playing, cycle]);
+
   const [headerRef, headerHeight] = useElementHeight<HTMLElement>();
   const [panelRef, panelHeight] = useElementHeight<HTMLElement>();
 
@@ -156,7 +198,7 @@ export default function App() {
       <main ref={panelRef} className="relative z-10 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-2xl flex flex-col gap-5 rounded-3xl border border-white/10 bg-night/55 p-5 desktop:p-7 backdrop-blur-md">
           <MoonInfo date={date} moon={moon} nextNew={nextNew} nextFull={nextFull} />
-          <PhaseScrubber date={date} cycle={cycle} markers={markers} onScrub={setDate} />
+          <PhaseScrubber date={date} cycle={cycle} markers={markers} onScrub={scrubTo} playing={playing} onTogglePlay={togglePlay} />
           <DateControls date={date} isToday={isSameLocalDay(date, new Date())} onChange={goTo} />
           <div className="border-t border-white/10 pt-4">
             <ObserverControls
