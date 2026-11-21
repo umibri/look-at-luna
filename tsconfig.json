@@ -1,34 +1,20 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "baseUrl": ".",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["vite/client", "node"],
     "paths": {
-      "@styles/*": ["styles/*"],
-      "@components/*": ["src/components/*"],
-      "@pages/*": ["src/pages/*"],
-      "@api/*": ["src/pages/api/*"],
-      "@lib/*": ["src/lib/*"],
+      "@components/*": ["./src/components/*"],
+      "@lib/*": ["./src/lib/*"]
     }
   },
-  "include": [
-    "next-env.d.ts", 
-    "src/components/**/*.ts", 
-    "src/components/**/*.tsx",
-    "src/pages/**/*.ts", 
-    "src/pages/**/*.tsx"
-  ],
-  "exclude": ["node_modules"]
+  "include": ["src", "vite.config.ts"]
 }

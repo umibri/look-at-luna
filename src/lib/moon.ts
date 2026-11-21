@@ -1,35 +1,12 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { AstronomicalConstants as AC, PrecisionConstants as PC } from '@lib/constants';
+import { AstronomicalConstants as AC } from '@lib/constants';
 import { fixangle, torad, todeg, kepler } from '@lib/calculations';
+import type { MoonData } from '@lib/types';
 
-type Data = {
-  message: number
-}
-
-interface MoonData {
-  [key: string]: number;
-  phase: number,
-  illuminated: number,
-  age: number,
-  distance: number,
-  angular_diameter: number,
-  sun_distance: number,
-  sun_angular_diameter: number,
-}
-
-export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<MoonData>
-) {
-  // res.status(200).json({ name: 'John Doe' })
-  const input = req.body.jd;
-  const output = displayPhase(input);
-
-  res.status(200).json(output);
-}
-
-
-function displayPhase(jd: number): MoonData {
+/**
+ * Moon phase and position for a Julian Date.
+ * Port of John Walker's moontool algorithm.
+ */
+export function getMoonData(jd: number): MoonData {
   const day = jd - AC.epoch;
   const N = fixangle((360 / 365.2422) * day);
   const M = fixangle(N + AC.ecliptic_longitude_epoch - AC.ecliptic_longitude_perigee);
