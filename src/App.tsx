@@ -9,14 +9,30 @@ import MoonScene from '@components/Three/MoonScene';
 import { useElementHeight } from './hooks/useElementHeight';
 import { getLibration } from '@lib/libration';
 import { findPhase, getMoonData, lunarCycle } from '@lib/moon';
-import { coarsen, moonRiseSet, type Location, type RiseSet } from '@lib/observer';
+import { coarsen, hemisphereOf, moonRiseSet, type Location, type RiseSet } from '@lib/observer';
+import { loadPlaces, placeForTimeZone, placeLabel } from '@lib/places';
 import { load, save } from '@lib/storage';
+import { browserTimeZone } from '@lib/timezone';
 import { addDays, isSameLocalDay, parseLocalDate, toDateInputValue, toJulianDate } from '@lib/utils';
 
 const isHemisphere = (v: unknown): v is Hemisphere => v === 'north' || v === 'south';
-const isLocation = (v: unknown): v is Location =>
+const hasCoordinates = (v: unknown): v is { latitude: number; longitude: number } =>
   typeof v === 'object' && v !== null &&
   typeof (v as Location).latitude === 'number' && typeof (v as Location).longitude === 'number';
+
+/**
+ * A saved location. Phase 5 saved bare coordinates from the device; read those
+ * as a device location on this browser's clock.
+ */
+function loadSavedLocation(): Location | null {
+  const saved = load('luna.location', null, hasCoordinates);
+  if (!saved) return null;
+  const v = saved as Partial<Location>;
+  if (typeof v.timeZone === 'string' && typeof v.label === 'string' && (v.source === 'city' || v.source === 'device')) {
+    return saved as Location;
+  }
+  return { latitude: saved.latitude, longitude: saved.longitude, timeZone: browserTimeZone() ?? 'UTC', label: 'Your location', source: 'device' };
+}
 
 const dateFromUrl = () => parseLocalDate(new URLSearchParams(window.location.search).get('date') ?? '');
 
@@ -47,23 +63,39 @@ export default function App() {
     [cycle],
   );
 
-  // Observer preferences, remembered per browser.
-  const [hemisphere, setHemisphere] = useState<Hemisphere>(() => load('luna.hemisphere', 'north', isHemisphere));
-  const [location, setLocation] = useState<Location | null>(() => load('luna.location', null, isLocation));
-  const [riseSet, setRiseSet] = useState<RiseSet | null>(null);
+  // Where the moon is viewed from: a place the viewer chose (saved in this
+  // browser), else the largest city in the browser's time zone. The guess
+  // needs no permission and is never saved.
+  const [saved, setSaved] = useState<Location | null>(loadSavedLocation);
+  const [guess, setGuess] = useState<Location | null>(null);
+  const location = saved ?? guess;
 
-  const changeHemisphere = (next: Hemisphere) => {
-    setHemisphere(next);
-    save('luna.hemisphere', next);
-  };
+  useEffect(() => {
+    const zone = browserTimeZone();
+    if (!zone) return;
+    loadPlaces().then((places) => {
+      const place = placeForTimeZone(places, zone);
+      if (place) {
+        setGuess({ latitude: place.latitude, longitude: place.longitude, timeZone: place.timeZone, label: placeLabel(place), source: 'timezone' });
+      }
+    });
+  }, []);
 
   const changeLocation = (next: Location | null) => {
     const stored = next && coarsen(next);
-    setLocation(stored);
+    setSaved(stored);
     save('luna.location', stored);
-    // Sharing a location answers the hemisphere question too.
-    if (stored) changeHemisphere(stored.latitude < 0 ? 'south' : 'north');
   };
+
+  // A location settles the hemisphere; the manual toggle is only a fallback.
+  const [manualHemisphere, setManualHemisphere] = useState<Hemisphere>(() => load('luna.hemisphere', 'north', isHemisphere));
+  const hemisphere = location ? hemisphereOf(location) : manualHemisphere;
+  const changeHemisphere = (next: Hemisphere) => {
+    setManualHemisphere(next);
+    save('luna.hemisphere', next);
+  };
+
+  const [riseSet, setRiseSet] = useState<RiseSet | null>(null);
 
   const [headerRef, headerHeight] = useElementHeight<HTMLElement>();
   const [panelRef, panelHeight] = useElementHeight<HTMLElement>();
@@ -80,7 +112,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [date]);
 
-  // Moonrise/moonset for the selected local day, once a location is known.
+  // Moonrise/moonset for the selected calendar day at the location.
   useEffect(() => {
     if (!location) {
       setRiseSet(null);
@@ -88,7 +120,7 @@ export default function App() {
     }
     let cancelled = false;
     setRiseSet(null);
-    moonRiseSet(date, location).then((result) => {
+    moonRiseSet(day, location).then((result) => {
       if (!cancelled) setRiseSet(result);
     });
     return () => {

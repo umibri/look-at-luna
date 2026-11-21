@@ -10,8 +10,15 @@ The phase math (`src/lib/moon.ts`) is a TypeScript port of John Walker's
 backend. Moonrise/moonset uses [astronomy-engine](https://github.com/cosinekitty/astronomy),
 which is also the test oracle for the app's own math.
 
-Location, if shared, is rounded to 0.1° and kept only in the browser's
-localStorage, along with the hemisphere preference.
+Location starts as the largest city in the browser's time zone (no
+permission prompt, never saved). Picking a city or sharing a device location
+saves it, rounded to 0.1°, in this browser's localStorage only. City data is
+from [GeoNames](https://www.geonames.org) (CC BY 4.0); rebuild it with:
+
+```bash
+# from https://download.geonames.org/export/dump/: cities15000.zip (unzipped) and admin1CodesASCII.txt
+node scripts/build-cities.mjs path/to/cities15000.txt path/to/admin1CodesASCII.txt
+```
 
 ## Scripts
 ```bash
@@ -33,6 +40,7 @@ tests, build, then publish `dist/` to GitHub Pages. Asset paths are relative
 - [x] **Phase 3 — Date UX:** ◀/▶ day stepping and ←/→ keys, controlled date picker, Today; lunar-cycle scrubber (new moon → new moon); `?date=` URL; info panel with illumination, age, distance, next new/full moon (`findPhase`)
 - [x] **Phase 4 — Aesthetic pass:** full-bleed scene with a camera rig that centres the moon in the space the UI leaves; Cormorant Garamond + Inter; glass info panel; scrubber with quarter/full markers; bump-mapped terminator; loading veil; SVG favicon; phone layout
 - [x] **Phase 5 — Observer:** Northern/Southern hemisphere view; optical libration (Meeus ch. 53, within 0.12° of astronomy-engine) wobbles the moon month to month; moonrise/moonset from the viewer's location (astronomy-engine, loaded on demand); deployed to GitHub Pages
+- [x] **Phase 6 — Location:** city search over ~1,200 GeoNames cities, default from the browser's time zone, hemisphere derived from the location (toggle only as a fallback), moonrise/moonset on the location's own calendar day and clock
 
 ## Inspiration
 - https://codepen.io/seanseansean/pen/vEjOvy
