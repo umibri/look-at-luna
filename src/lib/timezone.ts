@@ -42,6 +42,11 @@ export function formatTimeIn(instant: Date, timeZone: string): string {
   return instant.toLocaleTimeString(undefined, { timeZone, hour: 'numeric', minute: '2-digit' });
 }
 
+/** "Thu 12:24 AM" in the given time zone. */
+export function formatDayTimeIn(instant: Date, timeZone: string): string {
+  return instant.toLocaleString(undefined, { timeZone, weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
+
 /** Short zone name for an instant, e.g. "JST" or "GMT+9". */
 export function zoneAbbreviation(instant: Date, timeZone: string): string {
   return (

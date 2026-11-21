@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { coarsen, type Location, type RiseSet } from '@lib/observer';
 import { loadPlaces, nearestPlace, placeLabel, searchPlaces, type Place } from '@lib/places';
-import { browserTimeZone, formatTimeIn, zoneAbbreviation } from '@lib/timezone';
+import { browserTimeZone, formatDayTimeIn, formatTimeIn, zoneAbbreviation } from '@lib/timezone';
 
 export type Hemisphere = 'north' | 'south';
 
@@ -35,7 +35,6 @@ const toLocation = (place: Place, source: Location['source']): Location => ({
 export default function ObserverControls({ location, onLocationChange, riseSet, hemisphere, onHemisphereChange }: Props) {
   const [open, setOpen] = useState(false);
 
-  const time = (d: Date | null) => (d && location ? formatTimeIn(d, location.timeZone) : '—');
   // Say whose clock the times are on when it isn't the viewer's own.
   const foreignZone =
     location && location.timeZone !== browserTimeZone() ? ` ${zoneAbbreviation(riseSet?.rise ?? new Date(), location.timeZone)}` : '';
@@ -60,11 +59,11 @@ export default function ObserverControls({ location, onLocationChange, riseSet, 
         </p>
 
         {location ? (
-          <p className="tabular-nums whitespace-nowrap">
-            Moonrise <span className="text-moonlight">{riseSet ? time(riseSet.rise) : '…'}</span>
-            <span className="mx-2 text-moonlight/30">·</span>
-            Moonset <span className="text-moonlight">{riseSet ? time(riseSet.set) : '…'}</span>
-            {foreignZone && <span className="text-moonlight/40">{foreignZone}</span>}
+          <p className="tabular-nums flex flex-wrap justify-center gap-x-2">
+            <RiseSetTime label="Moonrise" at={riseSet?.rise} next={riseSet?.nextRise} pending={!riseSet} timeZone={location.timeZone} />
+            <span className="hidden desktop:inline text-moonlight/30" aria-hidden="true">·</span>
+            <RiseSetTime label="Moonset" at={riseSet?.set} next={riseSet?.nextSet} pending={!riseSet} timeZone={location.timeZone} />
+            {foreignZone && <span className="text-moonlight/40">{foreignZone.trim()}</span>}
           </p>
         ) : (
           // Without a location, the hemisphere is the one thing we can't infer.
@@ -94,6 +93,36 @@ export default function ObserverControls({ location, onLocationChange, riseSet, 
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One rise or set time. About once a month the event skips a calendar day
+ * (it comes ~50 minutes later each day and slips past midnight), so say so
+ * and give the next one rather than showing a bare dash.
+ */
+function RiseSetTime({ label, at, next, pending, timeZone }: {
+  label: string;
+  at: Date | null | undefined;
+  next: Date | null | undefined;
+  pending: boolean;
+  timeZone: string;
+}) {
+  let value: React.ReactNode;
+  if (pending) value = <span className="text-moonlight">…</span>;
+  else if (at) value = <span className="text-moonlight">{formatTimeIn(at, timeZone)}</span>;
+  else
+    value = (
+      <span title={`The moon's ${label.toLowerCase()} comes about 50 minutes later each day, so this date has none.`}>
+        <span className="text-moonlight">none today</span>
+        {next && <span className="text-moonlight/40"> (next {formatDayTimeIn(next, timeZone)})</span>}
+      </span>
+    );
+
+  return (
+    <span className="whitespace-nowrap">
+      {label} {value}
+    </span>
   );
 }
 

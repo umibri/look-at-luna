@@ -10,7 +10,7 @@ import { useElementHeight } from './hooks/useElementHeight';
 import { getLibration } from '@lib/libration';
 import { findPhase, getMoonData, lunarCycle } from '@lib/moon';
 import { coarsen, hemisphereOf, moonRiseSet, type Location, type RiseSet } from '@lib/observer';
-import { loadPlaces, placeForTimeZone, placeLabel } from '@lib/places';
+import { loadPlaces, nearestPlace, placeForTimeZone, placeLabel } from '@lib/places';
 import { load, save } from '@lib/storage';
 import { browserTimeZone } from '@lib/timezone';
 import { addDays, isSameLocalDay, parseLocalDate, toDateInputValue, toJulianDate } from '@lib/utils';
@@ -71,12 +71,18 @@ export default function App() {
   const location = saved ?? guess;
 
   useEffect(() => {
-    const zone = browserTimeZone();
-    if (!zone) return;
     loadPlaces().then((places) => {
-      const place = placeForTimeZone(places, zone);
+      const zone = browserTimeZone();
+      const place = zone && placeForTimeZone(places, zone);
       if (place) {
         setGuess({ latitude: place.latitude, longitude: place.longitude, timeZone: place.timeZone, label: placeLabel(place), source: 'timezone' });
+      }
+
+      // Device locations saved before Phase 6 have no nearby city in their
+      // label; add one now that the city list is here.
+      if (saved?.source === 'device' && saved.label === 'Your location') {
+        const near = nearestPlace(places, saved);
+        if (near) changeLocation({ ...saved, label: `Your location (near ${near.name})` });
       }
     });
   }, []);
