@@ -20,9 +20,16 @@ export interface Location extends Coordinates {
 }
 
 export interface RiseSet {
-  /** Null when the moon doesn't rise (or set) on this local day. */
+  /**
+   * Null when the moon doesn't rise (or set) on this local day. That happens
+   * about once a month: each event comes ~50 minutes later than the day
+   * before, so eventually one slips past midnight and skips a date.
+   */
   rise: Date | null;
   set: Date | null;
+  /** When `rise` (or `set`) is null: the next one after this day ends. */
+  nextRise: Date | null;
+  nextSet: Date | null;
 }
 
 /**
@@ -42,10 +49,20 @@ export async function moonRiseSet(day: string, where: Location): Promise<RiseSet
   const end = startOfDayIn(y, m, d + 1, where.timeZone);
   const limitDays = (end.getTime() - start.getTime()) / 86_400_000;
 
-  const find = (direction: 1 | -1) =>
-    SearchRiseSet(Body.Moon, observer, direction, start, limitDays)?.date ?? null;
+  const find = (direction: 1 | -1, from: Date, days: number) =>
+    SearchRiseSet(Body.Moon, observer, direction, from, days)?.date ?? null;
 
-  return { rise: find(1), set: find(-1) };
+  const rise = find(1, start, limitDays);
+  const set = find(-1, start, limitDays);
+
+  // A skipped event always happens within the next day, but near the poles
+  // the moon can stay up (or down) for days, so look a little further.
+  return {
+    rise,
+    set,
+    nextRise: rise ? null : find(1, end, 3),
+    nextSet: set ? null : find(-1, end, 3),
+  };
 }
 
 /**
